@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+/.pnp
+.pnp.js
+
+# Testing
+coverage/
+
+# Production Build Outputs
+dist/
+build/
+out/
+
+# Environment Variables and Secrets (CRITICAL)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+*.env.local
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# System Files
+.DS_Store
+Thumbs.db
+.apps/
+
+# IDEs and Editors
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
