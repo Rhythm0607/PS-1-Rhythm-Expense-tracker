@@ -1,5 +1,4 @@
 // Multi-model AI service - Choose any free model below
-
 type AIProvider = "claude" | "openai" | "gemini" | "groq";
 
 const EXPENSE_CATEGORIES = [
@@ -64,11 +63,12 @@ async function callOpenAIAPI(message: string): Promise<string> {
 }
 
 async function callGeminiAPI(message: string): Promise<string> {
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_API_KEY;
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_API_KEY?.trim();
   if (!apiKey) throw new Error("GOOGLE_API_KEY not set");
 
   const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,    {
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`,    
+      {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -81,7 +81,6 @@ async function callGeminiAPI(message: string): Promise<string> {
   const data = await response.json();
   return data.candidates[0].content.parts[0].text || "";
 }
-
 async function callGroqAPI(message: string): Promise<string> {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) throw new Error("GROQ_API_KEY not set");
@@ -201,12 +200,13 @@ Respond ONLY in this JSON format:
   }
 }
 
-export function getProviderInfo(): {
+export async function getProviderInfo(): Promise<{
   name: string;
   freeCredits: string;
   getKeyURL: string;
   envVar: string;
-} {
+ 
+}>{
   const providers: Record<AIProvider, any> = {
     claude: {
       name: "Claude (Anthropic)",
