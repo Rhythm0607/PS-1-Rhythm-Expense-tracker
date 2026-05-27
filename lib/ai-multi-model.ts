@@ -1,4 +1,5 @@
 // Multi-model AI service - Choose any free model below
+"use server";
 type AIProvider = "claude" | "openai" | "gemini" | "groq";
 
 const EXPENSE_CATEGORIES = [
@@ -63,7 +64,7 @@ async function callOpenAIAPI(message: string): Promise<string> {
 }
 
 async function callGeminiAPI(message: string): Promise<string> {
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_API_KEY?.trim();
+  const apiKey = process.env.GOOGLE_API_KEY?.trim();
   if (!apiKey) throw new Error("GOOGLE_API_KEY not set");
 
   const response = await fetch(

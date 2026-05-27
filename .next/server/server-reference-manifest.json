@@ -1,5 +1,38 @@
 {
-  "node": {},
+  "node": {
+    "24fae5ad5f095b4bcf9f31448b9e4fef6d496691": {
+      "workers": {
+        "app/dashboard/page": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2FUsers%2Frhythmbhnadari%2FDownloads%2Fexpense-tracker%2Flib%2Fai-multi-model.ts%22%2C%5B%22parseNaturalLanguageExpense%22%2C%22categorizeExpense%22%2C%22getProviderInfo%22%2C%22generateMonthlyInsights%22%5D%5D%5D&__client_imported__=true!"
+      },
+      "layer": {
+        "app/dashboard/page": "action-browser"
+      }
+    },
+    "6958dae656b81d7ec7743be5288bec70f463a86c": {
+      "workers": {
+        "app/dashboard/page": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2FUsers%2Frhythmbhnadari%2FDownloads%2Fexpense-tracker%2Flib%2Fai-multi-model.ts%22%2C%5B%22parseNaturalLanguageExpense%22%2C%22categorizeExpense%22%2C%22getProviderInfo%22%2C%22generateMonthlyInsights%22%5D%5D%5D&__client_imported__=true!"
+      },
+      "layer": {
+        "app/dashboard/page": "action-browser"
+      }
+    },
+    "6ff2a5041b1ae17ce810a910482d2862bf04070d": {
+      "workers": {
+        "app/dashboard/page": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2FUsers%2Frhythmbhnadari%2FDownloads%2Fexpense-tracker%2Flib%2Fai-multi-model.ts%22%2C%5B%22parseNaturalLanguageExpense%22%2C%22categorizeExpense%22%2C%22getProviderInfo%22%2C%22generateMonthlyInsights%22%5D%5D%5D&__client_imported__=true!"
+      },
+      "layer": {
+        "app/dashboard/page": "action-browser"
+      }
+    },
+    "efb47576e5fc8a7c524fa7a67e2a7161932eba2b": {
+      "workers": {
+        "app/dashboard/page": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2FUsers%2Frhythmbhnadari%2FDownloads%2Fexpense-tracker%2Flib%2Fai-multi-model.ts%22%2C%5B%22parseNaturalLanguageExpense%22%2C%22categorizeExpense%22%2C%22getProviderInfo%22%2C%22generateMonthlyInsights%22%5D%5D%5D&__client_imported__=true!"
+      },
+      "layer": {
+        "app/dashboard/page": "action-browser"
+      }
+    }
+  },
   "edge": {},
-  "encryptionKey": "mqpSn3/yThd3cLXge/q07RUDkfHxq87hEe9C1ohrVJg="
+  "encryptionKey": "VWnqBWb1tWHn6kuulmnciI+zWiWJuNHmE26gEgkIByY="
 }

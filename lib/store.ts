@@ -43,23 +43,29 @@ interface ExpenseStore {
 export const useAuthStore = create<AuthStore>((set) => ({
   user: null,
   loading: true,
+  
   login: async (email: string, password: string) => {
-    localStorage.setItem("user", JSON.stringify({ email, id: "user-" + Date.now() }));
-    set({ user: { email, id: "user-" + Date.now() } });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    set({ user: data.user });
   },
+  
   signup: async (email: string, password: string) => {
-    localStorage.setItem("user", JSON.stringify({ email, id: "user-" + Date.now() }));
-    set({ user: { email, id: "user-" + Date.now() } });
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) throw error;
+    set({ user: data.user });
   },
+  
   logout: async () => {
-    localStorage.removeItem("user");
-    localStorage.removeItem("expenses-data");
-    localStorage.removeItem("budgets-data");
+    await supabase.auth.signOut();
     set({ user: null });
+    // Reload the page to clear the expense store state
+    if (typeof window !== 'undefined') window.location.reload();
   },
+  
   checkAuth: async () => {
-    const user = localStorage.getItem("user");
-    set({ user: user ? JSON.parse(user) : null, loading: false });
+    const { data: { session } } = await supabase.auth.getSession();
+    set({ user: session?.user || null, loading: false });
   },
 }));
 
@@ -67,62 +73,100 @@ export const useExpenseStore = create<ExpenseStore>((set) => ({
   expenses: [],
   budgets: [],
   loading: false,
+
   fetchExpenses: async () => {
     set({ loading: true });
-    const data = JSON.parse(localStorage.getItem("expenses-data") || "[]");
-    set({ expenses: data.sort((a: Expense, b: Expense) => 
-      new Date(b.date).getTime() - new Date(a.date).getTime()
-    ), loading: false });
+    const { data, error } = await supabase
+      .from("expenses")
+      .select("*")
+      .order("date", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching expenses:", error);
+      set({ loading: false });
+      return;
+    }
+    set({ expenses: data || [], loading: false });
   },
+
   fetchBudgets: async () => {
-    const data = JSON.parse(localStorage.getItem("budgets-data") || "[]");
-    set({ budgets: data });
+    const { data, error } = await supabase.from("budgets").select("*");
+    if (error) {
+      console.error("Error fetching budgets:", error);
+      return;
+    }
+    set({ budgets: data || [] });
   },
+
   addExpense: async (expense) => {
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
-    const user_id = user.id || "demo-user";
-    
-    const data = JSON.parse(localStorage.getItem("expenses-data") || "[]");
-    data.push({
-      ...expense,
-      id: Math.random().toString(36),
-      user_id,
-      created_at: new Date().toISOString(),
+    const user = useAuthStore.getState().user;
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from("expenses")
+      .insert([{ ...expense, user_id: user.id }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error adding expense:", error);
+      return;
+    }
+
+    set((state) => {
+      const updatedExpenses = [...state.expenses, data];
+      // Keep expenses sorted by date, newest first
+      updatedExpenses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      return { expenses: updatedExpenses };
     });
-    localStorage.setItem("expenses-data", JSON.stringify(data));
-    
-    set({ expenses: data.sort((a: Expense, b: Expense) => 
-      new Date(b.date).getTime() - new Date(a.date).getTime()
-    ) });
   },
+
   deleteExpense: async (id) => {
+    const { error } = await supabase.from("expenses").delete().eq("id", id);
+    
+    if (error) {
+      console.error("Error deleting expense:", error);
+      return;
+    }
+
     set((state) => ({
       expenses: state.expenses.filter((e) => e.id !== id),
     }));
-    const data = JSON.parse(localStorage.getItem("expenses-data") || "[]");
-    const filtered = data.filter((item: any) => item.id !== id);
-    localStorage.setItem("expenses-data", JSON.stringify(filtered));
   },
-  addBudget: async (budget) => {
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
-    const user_id = user.id || "demo-user";
 
-    const data = JSON.parse(localStorage.getItem("budgets-data") || "[]");
-    data.push({
-      ...budget,
-      id: Math.random().toString(36),
-      user_id,
-      created_at: new Date().toISOString(),
-    });
-    localStorage.setItem("budgets-data", JSON.stringify(data));
-    set({ budgets: data });
+  addBudget: async (budget) => {
+    const user = useAuthStore.getState().user;
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from("budgets")
+      .insert([{ ...budget, user_id: user.id }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error adding budget:", error);
+      return;
+    }
+
+    set((state) => ({ budgets: [...state.budgets, data] }));
   },
+
   updateBudget: async (id, monthly_limit) => {
-    const data = JSON.parse(localStorage.getItem("budgets-data") || "[]");
-    const updated = data.map((item: any) =>
-      item.id === id ? { ...item, monthly_limit } : item
-    );
-    localStorage.setItem("budgets-data", JSON.stringify(updated));
-    set({ budgets: updated });
+    const { data, error } = await supabase
+      .from("budgets")
+      .update({ monthly_limit })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error updating budget:", error);
+      return;
+    }
+
+    set((state) => ({
+      budgets: state.budgets.map((item) => (item.id === id ? data : item)),
+    }));
   },
 }));

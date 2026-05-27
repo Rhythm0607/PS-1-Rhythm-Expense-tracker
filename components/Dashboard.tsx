@@ -74,7 +74,8 @@ export default function Dashboard() {
   useEffect(() => {
     setInsights("");
   }, [selectedMonth]);
-
+  // Sort categories so the highest spending always comes first
+  const sortedCategoryData = [...categoryData].sort((a, b) => b.value - a.value);
   return (
     <div className="space-y-6">
       {/* Month Selector */}
@@ -105,14 +106,14 @@ export default function Dashboard() {
         </div>
 
         <div className="card">
-          <p className="text-slate-400 text-sm mb-1">Top Category</p>
-          <p className="text-3xl font-bold text-purple-400">
-            {categoryData.length > 0 ? categoryData[0].name.split(" ")[0] : "—"}
-          </p>
-          <p className="text-slate-400 text-xs mt-2">
-            {categoryData.length > 0 ? `₹${categoryData[0].value.toFixed(2)}` : "No data"}
-          </p>
-        </div>
+  <p className="text-slate-400 text-sm mb-1">Top Category</p>
+  <p className="text-3xl font-bold text-purple-400">
+    {sortedCategoryData.length > 0 ? sortedCategoryData[0].name.split(" ")[0] : "—"}
+  </p>
+  <p className="text-slate-400 text-xs mt-2">
+    {sortedCategoryData.length > 0 ? `₹${sortedCategoryData[0].value.toFixed(2)}` : "No data"}
+  </p>
+</div>
       </div>
 
       {/* Charts */}
