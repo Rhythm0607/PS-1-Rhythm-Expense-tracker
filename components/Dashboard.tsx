@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useExpenseStore } from "@/lib/store";
 import { generateMonthlyInsights } from "@/lib/ai-multi-model";
-import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { format, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
 import { Sparkles } from "lucide-react";
 
@@ -12,11 +12,12 @@ export default function Dashboard() {
   const [insights, setInsights] = useState("");
   const [loadingInsights, setLoadingInsights] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date());
-
+  
   const currentMonth = format(selectedMonth, "yyyy-MM");
   const monthStart = startOfMonth(selectedMonth);
   const monthEnd = endOfMonth(selectedMonth);
 
+  // 1. Get only this month's expenses
   const monthlyExpenses = expenses.filter((e) => {
     const expenseDate = new Date(e.date);
     return isWithinInterval(expenseDate, { start: monthStart, end: monthEnd });
@@ -24,32 +25,30 @@ export default function Dashboard() {
 
   const totalSpent = monthlyExpenses.reduce((sum, e) => sum + e.amount, 0);
 
+  // 2. Prepare Pie Chart Data (Sorted highest to lowest)
   const categoryData = Object.entries(
-    monthlyExpenses.reduce(
-      (acc, e) => {
-        acc[e.category] = (acc[e.category] || 0) + e.amount;
-        return acc;
-      },
-      {} as Record<string, number>
-    )
+    monthlyExpenses.reduce((acc, e) => {
+      acc[e.category] = (acc[e.category] || 0) + e.amount;
+      return acc;
+    }, {} as Record<string, number>)
   ).map(([name, value]) => ({
     name,
     value: parseFloat(value.toFixed(2)),
-  }));
+  })).sort((a, b) => b.value - a.value);
 
-  const dailyData = monthlyExpenses.reduce(
-    (acc, e) => {
-      const day = format(new Date(e.date), "dd");
-      const existing = acc.find((d) => d.day === day);
-      if (existing) {
-        existing.amount += e.amount;
-      } else {
-        acc.push({ day, amount: e.amount });
-      }
-      return acc;
-    },
-    [] as Array<{ day: string; amount: number }>
-  );
+  // 3. Prepare Bar Chart Data (Grouped, Sorted, and Limited)
+  const groupedDailyData = monthlyExpenses.reduce((acc, e) => {
+    // Format to "MMM dd" (e.g., "May 28") for a beautiful X-Axis
+    const dateLabel = format(new Date(e.date), "MMM dd"); 
+    if (!acc[dateLabel]) acc[dateLabel] = { date: dateLabel, amount: 0, rawDate: e.date };
+    acc[dateLabel].amount += e.amount;
+    return acc;
+  }, {} as Record<string, { date: string; amount: number; rawDate: string }>);
+
+  // Convert to array, sort chronologically, and take max 31 days
+  const dailyData = Object.values(groupedDailyData)
+    .sort((a, b) => new Date(a.rawDate).getTime() - new Date(b.rawDate).getTime())
+    .slice(-14); // Safety limit!
 
   const COLORS = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#06b6d4", "#f97316", "#84cc16", "#14b8a6"];
 
@@ -74,8 +73,7 @@ export default function Dashboard() {
   useEffect(() => {
     setInsights("");
   }, [selectedMonth]);
-  // Sort categories so the highest spending always comes first
-  const sortedCategoryData = [...categoryData].sort((a, b) => b.value - a.value);
+
   return (
     <div className="space-y-6">
       {/* Month Selector */}
@@ -106,14 +104,14 @@ export default function Dashboard() {
         </div>
 
         <div className="card">
-  <p className="text-slate-400 text-sm mb-1">Top Category</p>
-  <p className="text-3xl font-bold text-purple-400">
-    {sortedCategoryData.length > 0 ? sortedCategoryData[0].name.split(" ")[0] : "—"}
-  </p>
-  <p className="text-slate-400 text-xs mt-2">
-    {sortedCategoryData.length > 0 ? `₹${sortedCategoryData[0].value.toFixed(2)}` : "No data"}
-  </p>
-</div>
+          <p className="text-slate-400 text-sm mb-1">Top Category</p>
+          <p className="text-3xl font-bold text-purple-400">
+            {categoryData.length > 0 ? categoryData[0].name.split(" ")[0] : "—"}
+          </p>
+          <p className="text-slate-400 text-xs mt-2">
+            {categoryData.length > 0 ? `₹${categoryData[0].value.toFixed(2)}` : "No data"}
+          </p>
+        </div>
       </div>
 
       {/* Charts */}
@@ -137,7 +135,7 @@ export default function Dashboard() {
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value) => `₹${value.toFixed(2)}`} />
+                <Tooltip formatter={(value: number) => `₹${value.toFixed(2)}`} />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -148,13 +146,13 @@ export default function Dashboard() {
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={dailyData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                <XAxis dataKey="day" stroke="#94a3b8" />
-                <YAxis stroke="#94a3b8" />
+                <XAxis dataKey="date" stroke="#94a3b8" fontSize={12} tickMargin={8} />
+                <YAxis stroke="#94a3b8" fontSize={12} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: "#1e293b", border: "1px solid #475569" }}
-                  formatter={(value) => `₹${value.toFixed(2)}`}
+                  contentStyle={{ backgroundColor: "#1e293b", border: "1px solid #475569", borderRadius: "8px" }}
+                  formatter={(value: number) => [`₹${value.toFixed(2)}`, "Spent"]}
                 />
-                <Bar dataKey="amount" fill="#3b82f6" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="amount" fill="#3b82f6" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

@@ -63,18 +63,29 @@ async function callOpenAIAPI(message: string): Promise<string> {
   return data.choices[0].message.content || "";
 }
 
-async function callGeminiAPI(message: string): Promise<string> {
+// 1. Add 'expectJson = false' as an optional parameter
+async function callGeminiAPI(message: string, expectJson: boolean = false): Promise<string> {
   const apiKey = process.env.GOOGLE_API_KEY?.trim();
   if (!apiKey) throw new Error("GOOGLE_API_KEY not set");
 
+  // 2. Build the base request body
+  const requestBody: any = {
+    contents: [{ parts: [{ text: message }] }],
+  };
+
+  // 3. Only apply the JSON lock if the function asked for it!
+  if (expectJson) {
+    requestBody.generationConfig = {
+      responseMimeType: "application/json",
+    };
+  }
+
   const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`,    
-      {
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`,
+    {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: message }] }],
-      }),
+      body: JSON.stringify(requestBody), // Send the dynamic body
     }
   );
 
@@ -173,31 +184,50 @@ Give insights about spending patterns and 1 suggestion for savings.`;
   }
 }
 
-export async function parseNaturalLanguageExpense(input: string): Promise<{
-  amount: number;
-  description: string;
-  date: string;
-}> {
-  const prompt = `Parse this expense entry and extract:
-1. Amount (number only)
-2. Description (what was bought)
-3. Date (in YYYY-MM-DD format, use today if not specified)
+export async function parseNaturalLanguageExpense(text: string) {
+  // 1. You likely already have your prompt and AI call here
+ const today = new Date().toISOString().split("T")[0]; 
 
-Input: "${input}"
+  const prompt = `
+    You are a precise financial data extractor. Today's exact date is ${today}.
+    
+    CRITICAL INSTRUCTIONS:
+    1. Respond ONLY with a raw JSON object.
+    2. NEVER use words for dates. Calculate the exact "YYYY-MM-DD" date based on Today (${today}).
 
-Respond ONLY in this JSON format:
-{"amount": number, "description": "text", "date": "YYYY-MM-DD"}`;
+    EXAMPLES:
+    Input: "I spent 50 on groceries yesterday"
+    Output: {"amount": 50, "description": "groceries", "category": "Food & Dining", "date": "2026-05-27"}
+    
+    Input: "Paid 1500 for rent on the 5th"
+    Output: {"amount": 1500, "description": "rent", "category": "Bills & Utilities", "date": "2026-05-05"}
+
+    Input: "${text}"
+    Output: 
+  `; // (Keep whatever prompt you currently have)
+  
+  const rawAiResponse = await callGeminiAPI(prompt,true);
+  
+  // 2. Add this temporary log so you can see what Gemini is doing in your Mac Terminal
+  console.log("Gemini sent back:", rawAiResponse);
 
   try {
-    const text = await callAI(prompt);
-    return JSON.parse(text);
+    // 1. Find the first '{' and the last '}' in the AI's response
+    const jsonMatch = rawAiResponse.match(/\{[\s\S]*\}/);
+    
+    if (!jsonMatch) {
+      throw new Error("No JSON object found in AI response");
+    }
+
+    // 2. Extract only that specific chunk
+    const cleanString = jsonMatch[0];
+    
+    // 3. Safely parse it!
+    return JSON.parse(cleanString);
+    
   } catch (error) {
-    console.error("Parsing failed:", error);
-    return {
-      amount: 0,
-      description: input,
-      date: new Date().toISOString().split("T")[0],
-    };
+    console.error("Failed to parse the cleaned string:", error);
+    throw new Error("Could not understand the AI response.");
   }
 }
 

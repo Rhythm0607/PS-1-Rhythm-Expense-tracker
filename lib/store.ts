@@ -36,6 +36,7 @@ interface ExpenseStore {
   fetchBudgets: () => Promise<void>;
   addExpense: (expense: Omit<Expense, "id" | "user_id" | "created_at">) => Promise<void>;
   deleteExpense: (id: string) => Promise<void>;
+  updateExpense: (id: string, updatedData: any) => Promise<void>; // Added perfectly here!
   addBudget: (budget: Omit<Budget, "id" | "user_id" | "created_at">) => Promise<void>;
   updateBudget: (id: string, monthly_limit: number) => Promise<void>;
 }
@@ -79,7 +80,8 @@ export const useExpenseStore = create<ExpenseStore>((set) => ({
     const { data, error } = await supabase
       .from("expenses")
       .select("*")
-      .order("date", { ascending: false });
+      .order("date", { ascending: false })
+      .limit(20);
 
     if (error) {
       console.error("Error fetching expenses:", error);
@@ -119,6 +121,26 @@ export const useExpenseStore = create<ExpenseStore>((set) => ({
       updatedExpenses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       return { expenses: updatedExpenses };
     });
+  },
+
+  updateExpense: async (id, updatedData) => {
+    try {
+      const { error } = await supabase
+        .from('expenses')
+        .update(updatedData)
+        .eq('id', id);
+
+      if (error) throw error;
+
+      // After updating the database, update the local state array so the UI changes instantly
+      set((state) => ({
+        expenses: state.expenses.map((expense) => 
+          expense.id === id ? { ...expense, ...updatedData } : expense
+        )
+      }));
+    } catch (error) {
+      console.error("Failed to update expense:", error);
+    }
   },
 
   deleteExpense: async (id) => {
