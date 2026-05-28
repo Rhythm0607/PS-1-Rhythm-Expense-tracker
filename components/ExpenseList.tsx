@@ -4,7 +4,7 @@ import { useState } from "react";
 import AddExpenseForm, { ExpenseData } from "./AddExpenseForm";
 import { useExpenseStore } from "@/lib/store";
 import { format } from "date-fns";
-import { Trash2, Calendar, FilterX, Download } from "lucide-react"; // Added Download icon
+import { Trash2, Calendar, FilterX, Download, Pencil } from "lucide-react"; // Added Pencil icon
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -50,22 +50,18 @@ export default function ExpenseList() {
 
   const filteredTotal = filteredExpenses.reduce((sum, exp) => sum + exp.amount, 0);
 
-  // --- THE PDF GENERATOR FUNCTION ---
   const generatePDF = () => {
     const doc = new jsPDF();
     
-    // 1. Add Title
     doc.setFontSize(20);
     doc.setTextColor(40, 40, 40);
     doc.text("Expense Report", 14, 22);
     
-    // 2. Add Subtitle (Date Range & Total)
     doc.setFontSize(11);
     doc.setTextColor(100, 100, 100);
     const dateText = (startDate && endDate) ? `From: ${startDate} To: ${endDate}` : "All Time";
     doc.text(`Period: ${dateText} | Total: Rs. ${filteredTotal.toFixed(2)}`, 14, 30);
 
-    // 3. Format data for the table
     const tableColumn = ["Date", "Description", "Category", "Amount (Rs)"];
     const tableRows = filteredExpenses.map(exp => [
       format(new Date(exp.date), "MMM dd, yyyy"),
@@ -74,7 +70,6 @@ export default function ExpenseList() {
       exp.amount.toFixed(2)
     ]);
 
-    // 4. Draw the table
     autoTable(doc, {
       head: [tableColumn],
       body: tableRows,
@@ -85,13 +80,13 @@ export default function ExpenseList() {
       alternateRowStyles: { fillColor: [245, 245, 245] }
     });
     
-    // 5. Download the file
     const filename = startDate && endDate ? `ExpenseReport_${startDate}_to_${endDate}.pdf` : `ExpenseReport_All.pdf`;
     doc.save(filename);
   };
 
   return (
     <>
+      {/* Date Filter Bar */}
       <div className="card mb-4 bg-slate-800/50 p-4 border border-slate-700 rounded-xl flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3 flex-wrap flex-1">
           <div className="flex items-center gap-2">
@@ -124,14 +119,12 @@ export default function ExpenseList() {
           )}
         </div>
         
-        {/* Total and Download Button Container */}
         <div className="flex flex-col items-end gap-2">
           <div className="text-right">
             <p className="text-xs text-slate-400">Filtered Total</p>
             <p className="text-lg font-bold text-white">₹{filteredTotal.toFixed(2)}</p>
           </div>
           
-          {/* THE NEW PDF BUTTON */}
           <button 
             onClick={generatePDF}
             disabled={filteredExpenses.length === 0}
@@ -143,48 +136,56 @@ export default function ExpenseList() {
         </div>
       </div>
 
-      <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+      {/* Main Expense List Window */}
+      <div className="space-y-3 max-h-[400px] overflow-y-auto pl-1 pr-2">
         {filteredExpenses.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-slate-400">No expenses found for this date range.</p>
           </div>
         ) : (
           filteredExpenses.map((expense) => (
-            <div key={expense.id} className="card flex items-center justify-between p-4 hover:bg-slate-700/50 transition border border-slate-800 rounded-xl">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${categoryColors[expense.category] || categoryColors.Other}`}>
+            <div key={expense.id} className="card flex items-center justify-between p-4 hover:bg-slate-700/50 transition border border-slate-800 rounded-xl gap-4">
+              
+              {/* Left Side: Category and Description (Given min-w-0 to prevent text pushouts) */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-3 mb-1.5 flex-wrap">
+                  <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium whitespace-nowrap ${categoryColors[expense.category] || categoryColors.Other}`}>
                     {expense.category}
                   </span>
-                  <span className="text-slate-400 text-sm">{format(new Date(expense.date), "MMM dd, yyyy")}</span>
+                  <span className="text-slate-400 text-xs whitespace-nowrap">{format(new Date(expense.date), "MMM dd, yyyy")}</span>
                 </div>
-                <p className="text-white font-medium">{expense.description}</p>
+                <p className="text-white font-medium text-sm truncate">{expense.description}</p>
               </div>
 
-              <div className="flex items-center gap-4 ml-4">
-                <span className="text-lg font-bold text-green-400">₹{expense.amount.toFixed(2)}</span>
+              {/* Right Side: Price and Action Buttons (Locked with flex-shrink-0 so they never distort) */}
+              <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                <span className="text-base font-bold text-green-400 mr-1 whitespace-nowrap">₹{expense.amount.toFixed(2)}</span>
                 
+                {/* Clean Blue Icon Edit Button */}
                 <button 
                   onClick={() => setEditingExpense(expense)}
-                  className="text-blue-400 hover:text-blue-300 transition"
+                  className="p-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-lg transition"
                   title="Edit expense"
                 >
-                  ✏️ Edit
+                  <Pencil size={15} />
                 </button>
 
+                {/* Clean Red Icon Delete Button */}
                 <button
                   onClick={() => deleteExpense(expense.id)}
-                  className="btn btn-danger px-3 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition"
+                  className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition"
                   title="Delete expense"
                 >
-                  <Trash2 size={16} />
+                  <Trash2 size={15} />
                 </button>
               </div>
+
             </div>
           ))
         )}
       </div>
 
+      {/* The Edit Modal */}
       {editingExpense && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md relative">
